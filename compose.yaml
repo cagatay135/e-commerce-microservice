@@ -1,0 +1,201 @@
+services:
+  product-db:
+    image: 'postgres:latest'
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=product_db
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    ports:
+      - '5432:5432'
+    command: [ "postgres", "-c", "wal_level=logical" ]
+    networks:
+      - springbootmicroservicesnetwork
+  order-db:
+    image: 'postgres:latest'
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=order_db
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    ports:
+      - '5433:5432'
+    command: [ "postgres", "-c", "wal_level=logical" ]
+    networks:
+      - springbootmicroservicesnetwork
+  inventory-db:
+    image: 'postgres:latest'
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=inventory_db
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    ports:
+      - '5434:5432'
+    command: [ "postgres", "-c", "wal_level=logical" ]
+    networks:
+      - springbootmicroservicesnetwork
+
+  eureka-server:
+    image: 'eureka-server:latest'
+    build:
+      context: ./eureka-server
+      dockerfile: Dockerfile
+    ports:
+      - '8761:8761'
+    environment:
+      - SPRING_APPLICATION_NAME=eurekaserver
+      - EUREKA_INSTANCE_HOSTNAME=localhost
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
+      - EUREKA_CLIENT_FETCH_REGISTRY=false
+      - SERVER_PORT=8761
+    networks:
+      - springbootmicroservicesnetwork
+  product-service:
+    image: 'product-service:latest'
+    build:
+      context: ./product-service
+      dockerfile: Dockerfile
+    container_name: product-service
+    ports:
+      - '8080:8080'
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/postgres
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    depends_on:
+      - product-db
+    networks:
+      - springbootmicroservicesnetwork
+  order-service:
+    image: 'order-service:latest'
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    container_name: order-service
+    ports:
+      - '8081:8081'
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/postgres
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    depends_on:
+      - order-db
+    networks:
+      - springbootmicroservicesnetwork
+  inventory-service:
+    image: 'inventory-service:latest'
+    build:
+      context: ./inventory-service
+      dockerfile: Dockerfile
+    container_name: inventory-service
+    ports:
+      - '8082:8082'
+    environment:
+      - SPRING_APPLICATION_NAME=inventory-service
+      - eureka.client.serviceUrl.defaultZone=http://eureka-server:8761/eureka
+      - spring.datasource.url=jdbc:postgresql://host.docker.internal:5434/postgres
+      - spring.datasource.username=postgres
+      - spring.datasource.password=postgres
+    depends_on:
+      - inventory-db
+    networks:
+      - springbootmicroservicesnetwork
+
+  zookeeper:
+    image: zookeeper:3.9.0
+    ports:
+      - 2181:2181
+      - 2888:2888
+      - 3888:3888
+  kafka:
+    image: docker.io/bitnami/kafka:3.4
+    ports:
+      - 9092:9092
+      - 9093:9093
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_ADVERTISED_LISTENERS=INTERNAL://kafka:9092,EXTERNAL://127.0.0.1:9093
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL
+      - KAFKA_LISTENERS=INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:9093
+    depends_on:
+      - zookeeper
+  connect:
+    image: debezium/connect:2.4.0.Final
+    ports:
+      - 8083:8083
+      - 8778:8778
+    links:
+      - kafka
+      - order-db
+    environment:
+      - BOOTSTRAP_SERVERS=kafka:9092
+      - GROUP_ID=debezium-events
+      - CONFIG_STORAGE_TOPIC=debezium_configs
+      - OFFSET_STORAGE_TOPIC=debezium_offsets
+      - STATUS_STORAGE_TOPIC=debezium_statuses
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+      - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
+      - KAFKA_CLUSTERS_0_SCHEMA_REGISTRY=http://localhost:8081
+      - SPRING_PROFILES_ACTIVE=prod
+    ports:
+      - "9000:8080"
+    depends_on:
+      - kafka
+  debezium-ui:
+    image: debezium/debezium-ui:2.4
+    platform: linux/amd64
+    environment:
+      - KAFKA_CONNECT_URIS=http://connect:8083  # Pointing to Kafka Connect service
+    ports:
+      - 9091:8080
+    depends_on:
+      - connect
+  setup-debezium-connector:
+    image: curlimages/curl
+    depends_on:
+      - connect
+    links:
+      - connect
+    environment:
+      DEBEZIUM_CONFIG: |
+        {
+          "name": "postgresql-connector",
+          "config": {
+            "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+            "connector.displayName": "PostgreSQL",
+            "topic.prefix": "pg-changes",
+            "database.user": "postgres",
+            "database.dbname": "order_db",
+            "table.exclude.list": "audit",
+            "database.hostname": "order-db",
+            "database.password": "postgres",
+            "name": "postgresql-connector",
+            "connector.id": "postgres",
+            "plugin.name": "pgoutput"
+          } 
+        }
+    command: >
+      sh -c "
+        sleep 10;
+        echo Waiting for Kafka Connect to start listening on connect:8083...;
+        while ! nc -z connect 8083;
+        do
+          sleep 1;
+        done;
+        echo Kafka Connect is up!;
+        echo $$DEBEZIUM_CONFIG > /tmp/debezium-connector-config.json
+        curl -X POST -H \"Content-Type: application/json\" --data @/tmp/debezium-connector-config.json http://connect:8083/connectors;
+      "
+networks:
+  springbootmicroservicesnetwork:
+    driver: bridge
