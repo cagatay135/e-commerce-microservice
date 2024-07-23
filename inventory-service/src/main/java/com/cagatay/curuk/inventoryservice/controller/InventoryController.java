@@ -1,30 +1,53 @@
 package com.cagatay.curuk.inventoryservice.controller;
 
+import com.cagatay.curuk.inventoryservice.dto.InventoryRequestDto;
+import com.cagatay.curuk.inventoryservice.dto.InventoryResponseDto;
 import com.cagatay.curuk.inventoryservice.service.InventoryService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
+import static com.cagatay.curuk.inventoryservice.constants.InventoryConstants.*;
+
+@Slf4j
 @RestController
-@RequestMapping("/api/inventories")
-@RequiredArgsConstructor
+@RequestMapping(API_PREFIX + API_INVENTORY)
+@AllArgsConstructor
 public class InventoryController {
 
     private InventoryService inventoryService;
 
+    @GetMapping("")
+    public ResponseEntity<List<InventoryResponseDto>> getAllInventory() {
+        List<InventoryResponseDto> inventories = inventoryService.getAllInventory();
+        return ResponseEntity.ok(inventories);
+    }
+
+    @GetMapping("/{productId}")
+    public ResponseEntity<InventoryResponseDto> getStock(@PathVariable UUID productId) {
+        InventoryResponseDto inventoryDto = inventoryService.getInventory(productId);
+        return ResponseEntity.ok(inventoryDto);
+    }
+
+    @PostMapping("")
+    public ResponseEntity<InventoryResponseDto> createInventory(@RequestBody InventoryRequestDto inventoryRequest) {
+        InventoryResponseDto inventoryDto = inventoryService.createInventory(inventoryRequest);
+        return ResponseEntity.ok(inventoryDto);
+    }
+
     @PostMapping("/reduce")
     public ResponseEntity<Void> reduceStock(@RequestParam("productId") UUID productId, @RequestParam("quantity") int quantity) {
-        try {
-            inventoryService.reduceStock(productId, quantity);
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        inventoryService.reduceStock(productId, quantity);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/stock-check")
+    public ResponseEntity<Boolean> checkStock(@RequestParam("productId") UUID productId, @RequestParam("quantity") int quantity) {
+        boolean isSufficient = inventoryService.isInventorySufficient(productId, quantity);
+        return ResponseEntity.ok(isSufficient);
     }
 }
