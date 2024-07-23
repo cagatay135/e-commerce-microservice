@@ -1,23 +1,40 @@
 package com.cagatay.curuk.orderservice.feign;
 
+import com.cagatay.curuk.orderservice.exception.ErrorBody;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import feign.Response;
 import feign.codec.ErrorDecoder;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
+import jakarta.ws.rs.ForbiddenException;
+import jakarta.ws.rs.InternalServerErrorException;
+import jakarta.ws.rs.NotFoundException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.coyote.BadRequestException;
 
+import java.io.IOException;
+import java.io.InputStream;
+
+@Slf4j
+@RequiredArgsConstructor
 public class FeignErrorDecoder implements ErrorDecoder {
+    private ErrorDecoder errorDecoder = new Default();
+
     @Override
     public Exception decode(String methodKey, Response response) {
-        HttpStatus status = HttpStatus.valueOf(response.status());
-        switch (status) {
-            case NOT_FOUND:
-                return new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found");
-            case BAD_REQUEST:
-                return new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bad request");
-            case INTERNAL_SERVER_ERROR:
-                return new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error");
-            default:
-                return new Exception("Generic error");
+        ErrorBody message = null;
+        try (InputStream bodyIs = response.body().asInputStream()) {
+            ObjectMapper mapper = new ObjectMapper();
+            message = mapper.readValue(bodyIs, ErrorBody.class);
+        } catch (IOException e) {
+            return new Exception(e.getMessage());
         }
+
+        return switch (response.status()) {
+            case 400 -> new BadRequestException(message.getErrorDescription());
+            case 403 -> new ForbiddenException(message.getErrorDescription());
+            case 404 -> new NotFoundException(message.getErrorDescription());
+            case 500 -> new InternalServerErrorException(message.getErrorDescription());
+            default -> errorDecoder.decode(methodKey, response);
+        };
     }
 }

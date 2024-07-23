@@ -1,11 +1,8 @@
 package com.cagatay.curuk.orderservice.model;
 
-import com.cagatay.curuk.orderservice.enums.OrderStatus;
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.math.BigDecimal;
 import java.util.UUID;
 
 @Getter

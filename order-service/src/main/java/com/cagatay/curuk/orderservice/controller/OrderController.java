@@ -1,46 +1,49 @@
 package com.cagatay.curuk.orderservice.controller;
 
 import com.cagatay.curuk.orderservice.dto.OrderResponseDto;
-import com.cagatay.curuk.orderservice.model.Order;
 import com.cagatay.curuk.orderservice.service.OrderService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
+import static com.cagatay.curuk.orderservice.constants.OrderConstants.*;
 
+@Slf4j
 @RestController
-@RequestMapping("/api/orders")
+@RequestMapping(API_PREFIX + API_ORDER)
 @RequiredArgsConstructor
+@Tag(name = "Order Controller")
 public class OrderController {
-
     private final OrderService orderService;
 
-    @GetMapping("/{id}")
-    public ResponseEntity<OrderResponseDto> getOrderById(@PathVariable UUID id) {
-        OrderResponseDto order = orderService.getOrderById(id);
-        if (order != null) {
-            return ResponseEntity.ok(order);
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+    @GetMapping("/{orderId}")
+    public ResponseEntity<OrderResponseDto> getOrderById(@PathVariable UUID orderId) {
+        log.info("Fetching order with ID: {}", orderId);
+        OrderResponseDto orderResponse = orderService.getOrderById(orderId);
+        return ResponseEntity.ok(orderResponse);
     }
 
-    @PostMapping
-    public ResponseEntity<Order> createOrder(@RequestBody Order order) {
-        try {
-            Order createdOrder = orderService.createOrder(order);
-            return ResponseEntity.ok(createdOrder);
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(null);
-        }
+    @PostMapping()
+    public ResponseEntity<OrderResponseDto> createOrder() {
+        log.info("Creating a new order");
+        OrderResponseDto createdOrder = orderService.createOrder();
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdOrder);
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteOrder(@PathVariable UUID id) {
-        orderService.deleteOrder(id);
+    @DeleteMapping("/{orderId}")
+    public ResponseEntity<Void> cancelOrder(@PathVariable UUID orderId) {
+        log.info("Cancelling order with ID: {}", orderId);
+        orderService.cancelOrder(orderId);
         return ResponseEntity.noContent().build();
     }
 }

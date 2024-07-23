@@ -20,14 +20,9 @@ public class OrderMapper {
 
         return OrderResponseDto.builder()
                 .id(order.getId())
+                .status(order.getStatus())
                 .orderItems(orderItemResponseDtos.stream().sorted(Comparator.comparing(OrderItemResponseDto::name)).toList())
-
-                /*.totalPrice(
-                        orderItemResponseDtos
-                                .stream()
-                                .map(orderItemResponseDto -> orderItemResponseDto.price().multiply(BigDecimal.valueOf(orderItemResponseDto.quantity())))
-                          */
+                .totalPrice(orderItemResponseDtos.stream().map(OrderItemResponseDto::price).reduce(BigDecimal.ZERO, BigDecimal::add))
                 .build();
     }
-
 }

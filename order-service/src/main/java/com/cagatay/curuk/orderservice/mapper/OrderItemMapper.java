@@ -1,12 +1,13 @@
 package com.cagatay.curuk.orderservice.mapper;
 
+import com.cagatay.curuk.orderservice.dto.OrderItemRequestDto;
 import com.cagatay.curuk.orderservice.dto.OrderItemResponseDto;
 import com.cagatay.curuk.orderservice.dto.ProductResponseDto;
+import com.cagatay.curuk.orderservice.exception.OrderNotFoundException;
 import com.cagatay.curuk.orderservice.feign.ProductClient;
 import com.cagatay.curuk.orderservice.model.OrderItem;
 import com.cagatay.curuk.orderservice.repository.OrderItemRepository;
 import com.cagatay.curuk.orderservice.repository.OrderRepository;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -29,6 +30,14 @@ public class OrderItemMapper {
                 .quantity(orderItem.getQuantity())
                 .name(product.name())
                 .price(product.price())
+                .build();
+    }
+
+    public OrderItem toEntity(OrderItemRequestDto orderItemRequestDto) {
+        return OrderItem.builder()
+                .productId(orderItemRequestDto.productId())
+                .quantity(orderItemRequestDto.quantity())
+                .order(orderRepository.findById(orderItemRequestDto.orderId()).orElseThrow(OrderNotFoundException ::new))
                 .build();
     }
 
