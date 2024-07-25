@@ -15,7 +15,7 @@ import static com.cagatay.curuk.inventoryservice.constants.InventoryConstants.*;
 
 @Slf4j
 @RestController
-@RequestMapping(API_PREFIX + API_INVENTORY)
+@RequestMapping(API_INVENTORY)
 @AllArgsConstructor
 public class InventoryController {
 
