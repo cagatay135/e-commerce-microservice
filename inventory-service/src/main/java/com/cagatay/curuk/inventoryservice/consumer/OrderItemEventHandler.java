@@ -22,12 +22,18 @@ public class OrderItemEventHandler {
     public void processMessage(@Payload OrderItemDebeziumMessage message) {
         logger.info("Received message: " + message.getOperationCode());
 
-        if (message.getOperationType().equals(DebeziumOperationType.CREATE)) {
-            logger.info("Order created: " + message.getAfter());
-        } else if (message.getOperationType().equals(DebeziumOperationType.UPDATE)) {
-            logger.info("Order updated: " + message.getAfter());
-        } else if (message.getOperationType().equals(DebeziumOperationType.DELETE)) {
-            logger.info("Order deleted: " + message.getBefore());
+        switch (message.getOperationType()) {
+            case DebeziumOperationType.CREATE:
+                inventoryService.updateStock(message.getAfter().getProductId(), -message.getAfter().getQuantity());
+                break;
+            case DebeziumOperationType.UPDATE:
+                inventoryService.updateStock(message.getAfter().getProductId(), -(message.getAfter().getQuantity() - message.getBefore().getQuantity()));
+                break;
+            case DebeziumOperationType.DELETE:
+                inventoryService.updateStock(message.getBefore().getProductId(), message.getBefore().getQuantity());
+                break;
+            default:
+                logger.warning("Unknown operation code: " + message.getOperationCode());
         }
     }
 }

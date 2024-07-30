@@ -67,6 +67,25 @@ public class InventoryService {
         inventoryRepository.save(inventory);
     }
 
+    public void updateStock(UUID productId, int quantityChange) {
+        if (quantityChange == 0) return;
+
+        Inventory inventory = inventoryRepository.findByProductId(productId)
+                .orElseThrow(() -> new ProductNotFoundException("Product not found with id: " + productId));
+
+        int newQuantity = inventory.getQuantity() + quantityChange;
+
+        if (newQuantity < 0)
+            throw new InsufficientStockException("Insufficient stock for product: " + productId);
+
+        inventory.setQuantity(newQuantity);
+        inventoryRepository.save(inventory);
+    }
+
+
+
+
+
     public boolean isInventorySufficient(UUID productId, int quantity) {
         Inventory inventory = inventoryRepository.findByProductId(productId)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found with id: " + productId));
