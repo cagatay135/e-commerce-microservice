@@ -5,17 +5,16 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 @Getter
 @Setter
 public class OrderMessage {
-    private UUID id;
+    private String id;
 
     private String status;
 
     @JsonProperty("total_price")
-    private BigDecimal totalPrice;
+    private String totalPrice;
 
     @Override
     public String toString() {
