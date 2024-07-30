@@ -9,7 +9,6 @@ import com.cagatay.curuk.orderservice.exception.InsufficientStockException;
 import com.cagatay.curuk.orderservice.exception.OrderItemNotFoundException;
 import com.cagatay.curuk.orderservice.exception.OrderNotFoundException;
 import com.cagatay.curuk.orderservice.feign.InventoryClient;
-import com.cagatay.curuk.orderservice.feign.ProductClient;
 import com.cagatay.curuk.orderservice.mapper.OrderItemMapper;
 import com.cagatay.curuk.orderservice.mapper.OrderMapper;
 import com.cagatay.curuk.orderservice.model.Order;
@@ -23,7 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.PostMapping;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -71,9 +69,12 @@ public class OrderService {
     @Transactional
     public void cancelOrder(UUID orderId) {
         try {
-            Order order = findOrderById(orderId);
+            Order order = orderRepository.findById(orderId).orElseThrow(OrderNotFoundException::new);
+
             order.setStatus(OrderStatus.CANCELLED);
             orderRepository.save(order);
+
+            deleteAllOrderItemsInOrder(orderId);
             log.info("Deleted order {}", orderId);
         } catch (Exception e) {
             log.error("Order could not be deleted. Error: {}", e.getMessage());
