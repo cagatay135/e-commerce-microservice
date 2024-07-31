@@ -79,6 +79,9 @@ public class InventoryService {
             throw new InsufficientStockException("Insufficient stock for product: " + productId);
 
         inventory.setQuantity(newQuantity);
+
+        log.info("Stock updated for product {}", productId);
+
         inventoryRepository.save(inventory);
     }
 

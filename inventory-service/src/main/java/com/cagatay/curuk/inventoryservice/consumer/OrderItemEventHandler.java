@@ -20,7 +20,6 @@ public class OrderItemEventHandler {
 
     @KafkaListener(topics = "orders.public.order_items", groupId = "inventory-service", containerFactory = "OrderItemKafkaListenerContainerFactory")
     public void processMessage(@Payload OrderItemDebeziumMessage message) {
-        logger.info("Received message: " + message.getOperationCode());
 
         switch (message.getOperationType()) {
             case DebeziumOperationType.CREATE:
@@ -30,7 +29,7 @@ public class OrderItemEventHandler {
                 inventoryService.updateStock(message.getAfter().getProductId(), -(message.getAfter().getQuantity() - message.getBefore().getQuantity()));
                 break;
             case DebeziumOperationType.DELETE:
-                inventoryService.updateStock(message.getBefore().getProductId(), message.getBefore().getQuantity());
+                inventoryService.updateStock(message.getBefore().getProductId(), -message.getBefore().getQuantity());
                 break;
             default:
                 logger.warning("Unknown operation code: " + message.getOperationCode());
