@@ -36,11 +36,17 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryDto);
     }
 
-
     @Operation(summary = "Create inventory for a product")
     @PostMapping("")
     public ResponseEntity<InventoryResponseDto> createInventory(@RequestBody InventoryRequestDto inventoryRequest) {
         InventoryResponseDto inventoryDto = inventoryService.createInventory(inventoryRequest);
+        return ResponseEntity.ok(inventoryDto);
+    }
+
+    @Operation(summary = "Update inventory for a product")
+    @PutMapping("")
+    public ResponseEntity<InventoryResponseDto> updateInventory(@RequestBody InventoryRequestDto inventoryRequest) {
+        InventoryResponseDto inventoryDto = inventoryService.updateInventory(inventoryRequest);
         return ResponseEntity.ok(inventoryDto);
     }
 

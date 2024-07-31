@@ -54,6 +54,18 @@ public class InventoryService {
         }
     }
 
+    public InventoryResponseDto updateInventory(InventoryRequestDto inventoryRequestDto) {
+        Inventory inventory = inventoryRepository.findByProductId(inventoryRequestDto.productId())
+                .orElseThrow(() -> new ProductNotFoundException("Product not found with id: " + inventoryRequestDto.productId()));
+
+        inventory.setQuantity(inventoryRequestDto.quantity());
+        inventoryRepository.save(inventory);
+
+        log.info("Updated inventory for product {}", inventory.getProductId());
+
+        return inventoryMapper.toResponseDto(inventory);
+    }
+
     @Transactional
     public void reduceStock(UUID productId, int quantity) {
         Inventory inventory = inventoryRepository.findByProductId(productId)
@@ -84,10 +96,6 @@ public class InventoryService {
 
         inventoryRepository.save(inventory);
     }
-
-
-
-
 
     public boolean isInventorySufficient(UUID productId, int quantity) {
         Inventory inventory = inventoryRepository.findByProductId(productId)
